@@ -1,7 +1,3 @@
----
-name: AWS Serverless File Service
-overview: Design and implement an AWS serverless file management system using API Gateway, Lambda, S3, and DynamoDB, with a TypeScript/Express backend that can be deployed as Lambda functions.
-
 # AWS Serverless File Management Service
 
 ## Architecture Overview
