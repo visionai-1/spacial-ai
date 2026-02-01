@@ -1,0 +1,124 @@
+.action-log {
+  width: 380px;
+  min-width: 300px;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  overflow: hidden;
+}
+
+.action-log-title {
+  margin: 0;
+  padding: 16px 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  border-bottom: 1px solid #eee;
+  background-color: #fafafa;
+}
+
+.action-log-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.action-log-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.action-log-table thead {
+  background-color: #f8f9fa;
+}
+
+.action-log-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+  border-bottom: 1px solid #eee;
+}
+
+.action-log-body-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.action-log-table td {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: #333;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+}
+
+.action-log-table tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.col-time {
+  width: 80px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 13px;
+  color: #666;
+}
+
+.col-action {
+  width: 110px;
+}
+
+.col-details {
+  width: auto;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 13px;
+  color: #666;
+}
+
+.action-icon {
+  margin-right: 6px;
+}
+
+.log-entry.action-zoom_in td:nth-child(2) {
+  color: #2e7d32;
+}
+
+.log-entry.action-zoom_out td:nth-child(2) {
+  color: #c62828;
+}
+
+.log-entry.action-pan td:nth-child(2) {
+  color: #1565c0;
+}
+
+.log-entry.action-reset td:nth-child(2) {
+  color: #6a1b9a;
+}
+
+.empty-row td {
+  padding: 0;
+}
+
+.empty-message {
+  padding: 40px 20px;
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+}
+
+.action-log-footer {
+  padding: 12px 20px;
+  font-size: 13px;
+  color: #888;
+  background-color: #fafafa;
+  border-top: 1px solid #eee;
+  text-align: right;
+}

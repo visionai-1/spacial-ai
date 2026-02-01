@@ -1,0 +1,202 @@
+# Serverless Framework Configuration
+# File Management Service - AWS Lambda Deployment
+
+service: file-management-service
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  
+  # Environment variables
+  environment:
+    NODE_ENV: ${self:provider.stage}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+    S3_BUCKET_NAME: ${self:custom.bucketName}
+    DYNAMODB_TABLE_NAME: ${self:custom.tableName}
+    PRESIGNED_URL_EXPIRY: '3600'
+    MAX_FILE_SIZE: '104857600'
+    CORS_ORIGINS: ${self:custom.corsOrigins.${self:provider.stage}, 'http://localhost:5173'}
+  
+  # IAM permissions
+  iam:
+    role:
+      statements:
+        # S3 permissions
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+            - s3:HeadObject
+          Resource:
+            - arn:aws:s3:::${self:custom.bucketName}/*
+        
+        # DynamoDB permissions
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+          Resource:
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.tableName}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${self:custom.tableName}/index/*
+
+custom:
+  # Resource naming
+  bucketName: file-management-${self:provider.stage}-${aws:accountId}
+  tableName: FileMetadata-${self:provider.stage}
+  
+  # CORS origins per stage
+  corsOrigins:
+    dev: 'http://localhost:5173,http://127.0.0.1:5173'
+    staging: 'https://staging.example.com'
+    prod: 'https://app.example.com'
+  
+  # Serverless plugins configuration
+  esbuild:
+    bundle: true
+    minify: true
+    sourcemap: true
+    platform: 'node'
+    target: 'node18'
+    exclude:
+      - aws-sdk
+  
+  # Custom domain (optional)
+  customDomain:
+    domainName: api-${self:provider.stage}.example.com
+    basePath: ''
+    stage: ${self:provider.stage}
+    createRoute53Record: true
+
+plugins:
+  - serverless-esbuild
+
+functions:
+  # Main API handler
+  api:
+    handler: src/lambda.handler
+    timeout: 30
+    memorySize: 512
+    events:
+      - http:
+          path: /
+          method: ANY
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-User-Id
+              - X-User-Email
+            allowCredentials: true
+      - http:
+          path: /{proxy+}
+          method: ANY
+          cors:
+            origin: '*'
+            headers:
+              - Content-Type
+              - Authorization
+              - X-User-Id
+              - X-User-Email
+            allowCredentials: true
+
+resources:
+  Resources:
+    # S3 Bucket for file storage
+    FileStorageBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucketName}
+        VersioningConfiguration:
+          Status: Enabled
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              AllowedOrigins:
+                - '*'
+              MaxAge: 3600
+        LifecycleConfiguration:
+          Rules:
+            - Id: MoveToGlacierAfter90Days
+              Status: Enabled
+              Transitions:
+                - StorageClass: GLACIER
+                  TransitionInDays: 90
+              NoncurrentVersionTransitions:
+                - StorageClass: GLACIER
+                  TransitionInDays: 30
+    
+    # DynamoDB Table for file metadata
+    FileMetadataTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tableName}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: PK
+            AttributeType: S
+          - AttributeName: SK
+            AttributeType: S
+          - AttributeName: projectId
+            AttributeType: S
+          - AttributeName: fileType
+            AttributeType: S
+        KeySchema:
+          - AttributeName: PK
+            KeyType: HASH
+          - AttributeName: SK
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: FileTypeIndex
+            KeySchema:
+              - AttributeName: projectId
+                KeyType: HASH
+              - AttributeName: fileType
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+        PointInTimeRecoverySpecification:
+          PointInTimeRecoveryEnabled: true
+        Tags:
+          - Key: Service
+            Value: file-management
+          - Key: Environment
+            Value: ${self:provider.stage}
+
+  Outputs:
+    ApiEndpoint:
+      Description: API Gateway endpoint URL
+      Value:
+        Fn::Sub: https://${ApiGatewayRestApi}.execute-api.${self:provider.region}.amazonaws.com/${self:provider.stage}
+    
+    S3BucketName:
+      Description: S3 bucket name for file storage
+      Value: ${self:custom.bucketName}
+    
+    DynamoDBTableName:
+      Description: DynamoDB table name for file metadata
+      Value: ${self:custom.tableName}
